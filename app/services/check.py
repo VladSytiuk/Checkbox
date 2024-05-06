@@ -22,7 +22,9 @@ class CheckService(BaseService):
     ) -> Check:
         products_data = self._get_products_data(products)
         check_total = self._calculate_check_total(products_data)
+
         self._validate_payment(payment=payment, total=check_total)
+
         rest = abs(check_total - payment.amount)
         check = Check(
             user_id=user_id,
@@ -40,11 +42,15 @@ class CheckService(BaseService):
     def get_checks_list(
         self, user_id: int, check_filter: CheckFilter
     ) -> list[CheckShow]:
-        query = check_filter.filter(select(Check).where(Check.user_id == user_id))
+        query = check_filter.filter(
+            select(Check).where(Check.user_id == user_id)
+        )
         checks = self.db.execute(query).scalars().all()
         checks_list = []
         for check in checks:
-            payment = Payment(type=check.payment_type, amount=check.payment_amount)
+            payment = Payment(
+                type=check.payment_type, amount=check.payment_amount
+            )
             checks_list.append(
                 CheckShow(
                     id=check.id,
@@ -122,7 +128,9 @@ class CheckService(BaseService):
             product_total = product["total"]
 
             # Format product data
-            product_data = f"{format_quantity(quantity)} x {format_price(price)}"
+            product_data = (
+                f"{format_quantity(quantity)} x {format_price(price)}"
+            )
             product_line_1 = product_data.ljust(max_row_length)
             product_line_2 = (
                 f"{name.ljust(max_row_length - len(format_price(product_total)))}"
@@ -150,7 +158,9 @@ class CheckService(BaseService):
         lines.append(total_line)
 
         # Add payment
-        payment_line = f"Payment {format_price(check.payment_amount): >{payment_space}}"
+        payment_line = (
+            f"Payment {format_price(check.payment_amount): >{payment_space}}"
+        )
         lines.append(payment_line)
 
         # Add rest

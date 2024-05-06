@@ -7,7 +7,9 @@ class CheckNotFoundError(BaseError):
     def __init__(self, check_id):
         status_code = status.HTTP_404_NOT_FOUND
         detail = f"Check with id {check_id} does not exist"
-        super(CheckNotFoundError, self).__init__(status_code=status_code, detail=detail)
+        super(CheckNotFoundError, self).__init__(
+            status_code=status_code, detail=detail
+        )
 
 
 class NotEnoughPaymentAmountError(BaseError):

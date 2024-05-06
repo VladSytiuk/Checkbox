@@ -11,6 +11,7 @@ router = APIRouter()
 
 @router.post("/", response_model=Token, status_code=status.HTTP_201_CREATED)
 def get_access_token(
-    request: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     return AuthService(db).get_access_token(request.username, request.password)

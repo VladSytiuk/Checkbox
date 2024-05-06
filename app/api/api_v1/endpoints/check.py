@@ -25,7 +25,9 @@ def create_check(
     current_user: User = Depends(get_current_user),
 ):
     service = CheckService(db)
-    check = service.create_check(request.products, request.payment, current_user.id)
+    check = service.create_check(
+        request.products, request.payment, current_user.id
+    )
     payment = Payment(type=check.payment_type, amount=check.payment_amount)
     return CheckShow(
         id=check.id,

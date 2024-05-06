@@ -53,7 +53,10 @@ def create_test_user():
 @pytest.fixture()
 def get_headers_with_jwt():
     user_data = create_test_user()
-    data = {"username": user_data["username"], "password": user_data["password"]}
+    data = {
+        "username": user_data["username"],
+        "password": user_data["password"],
+    }
     response = client.post(URL_USER_LOGIN, data=data)
     jwt = response.json()
     headers = {
@@ -65,7 +68,10 @@ def get_headers_with_jwt():
 @pytest.fixture()
 def sign_up_data():
     user_data = create_test_user()
-    return {"username": user_data["username"], "password": user_data["password"]}
+    return {
+        "username": user_data["username"],
+        "password": user_data["password"],
+    }
 
 
 @pytest.fixture()
@@ -77,5 +83,5 @@ def check_query_params():
         "created_at__lte": "2024-05-07",
         "payment_type": "cash",
         "page": 1,
-        "size": 1
+        "size": 1,
     }
