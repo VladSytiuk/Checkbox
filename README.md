@@ -28,7 +28,7 @@ First install the dependencies from the pyproject.toml file
 ```commandline
 poetry install
 ```
-Then apply migrations:
+Then run app:
 ```commandline
 uvicorn app.main:app
 ```
