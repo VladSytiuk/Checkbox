@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from app import models
 from app.schemas.user import User
 from app.hashing import get_password_hash
@@ -7,12 +9,11 @@ from app.errors.user import UserAlreadyExistError
 
 class UserService(BaseService):
 
-    def create_user(self, request: User) -> str:
-        user = (
-            self.db.query(models.User)
-            .filter(models.User.username == request.username)
-            .first()
+    async def create_user(self, request: User) -> str:
+        query = await self.db.execute(
+            select(models.User).where(models.User.username == request.username)
         )
+        user = query.scalars().first()
         if user:
             raise UserAlreadyExistError(username=user.username)
         hashed_password = get_password_hash(request.password)
@@ -23,6 +24,6 @@ class UserService(BaseService):
             password=hashed_password,
         )
         self.db.add(new_user)
-        self.db.commit()
-        self.db.refresh(new_user)
+        await self.db.commit()
+        await self.db.refresh(new_user)
         return f"User with username {request.username} has been created successfully"

@@ -5,7 +5,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi_filter import FilterDepends
 from fastapi_pagination import Page, paginate
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.check import CheckCreate, CheckShow, Payment
 from app.services.check import CheckService
@@ -19,13 +19,13 @@ router = APIRouter(tags=["Checks"])
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=CheckShow)
-def create_check(
+async def create_check(
     request: CheckCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = CheckService(db)
-    check = service.create_check(
+    check = await service.create_check(
         request.products, request.payment, current_user.id
     )
     payment = Payment(type=check.payment_type, amount=check.payment_amount)
@@ -40,24 +40,24 @@ def create_check(
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def get_checks(
+async def get_checks(
     check_filter: CheckFilter = FilterDepends(CheckFilter),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Page:
     service = CheckService(db)
-    checks = service.get_checks_list(current_user.id, check_filter)
+    checks = await service.get_checks_list(current_user.id, check_filter)
     return paginate(checks)
 
 
 @router.get("/{check_id}", status_code=status.HTTP_200_OK)
-def get_check(
+async def get_check(
     check_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = CheckService(db)
-    check = service.get_check(check_id, current_user.id)
+    check = await service.get_check(check_id, current_user.id)
     payment = Payment(type=check.payment_type, amount=check.payment_amount)
     return CheckShow(
         id=check.id,
@@ -74,13 +74,13 @@ def get_check(
     status_code=status.HTTP_200_OK,
     response_class=PlainTextResponse,
 )
-def get_text_check(
+async def get_text_check(
     check_id: int,
     max_row_length: Union[int, None] = settings.DEFAULT_MAX_ROW_LENGTH,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     service = CheckService(db)
-    text_check = service.generate_text_check(
+    text_check = await service.generate_text_check(
         check_id=check_id, max_row_length=max_row_length
     )
     return text_check

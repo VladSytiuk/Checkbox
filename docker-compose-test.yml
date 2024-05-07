@@ -9,8 +9,8 @@ services:
       context: .
       dockerfile: Dockerfile-test
     command: >
-      bash -c "pytest tests"
-
+      sh -c "alembic upgrade head &&
+             pytest tests -v"
     ports:
       - "8001:8001"
     volumes:

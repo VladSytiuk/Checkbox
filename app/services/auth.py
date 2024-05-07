@@ -5,6 +5,8 @@ from fastapi.security import OAuth2PasswordBearer
 
 from jose import jwt, JWTError
 
+from sqlalchemy import select
+
 from app.models import User
 from app.services.base import BaseService
 from app.hashing import verify_password
@@ -21,15 +23,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
 
 class AuthService(BaseService):
 
-    def get_access_token(self, username: str, password: str) -> dict:
-        user = self.db.query(User).filter(User.username == username).first()
+    async def get_access_token(self, username: str, password: str) -> dict:
+        query = await self.db.execute(
+            select(User).where(User.username == username)
+        )
+        user = query.scalars().first()
         if not user or not verify_password(password, user.password):
             raise InvalidCredentialsError()
-        access_token = self.create_access_token(data={"sub": user.username})
+        access_token = await self.create_access_token(
+            data={"sub": user.username}
+        )
         return {"access_token": access_token, "token_type": "bearer"}
 
     @staticmethod
-    def create_access_token(
+    async def create_access_token(
         data: dict, expires_delta: Union[timedelta, None] = None
     ) -> str:
         to_encode = data.copy()

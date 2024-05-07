@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.user import User
 from app.services.user import UserService
@@ -10,6 +10,6 @@ router = APIRouter(tags=["Users"])
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_user(request: User, db: Session = Depends(get_db)):
+async def create_user(request: User, db: AsyncSession = Depends(get_db)):
     service = UserService(db)
-    return service.create_user(request)
+    return await service.create_user(request)

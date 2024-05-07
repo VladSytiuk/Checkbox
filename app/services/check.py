@@ -17,7 +17,7 @@ from app.config import settings
 
 class CheckService(BaseService):
 
-    def create_check(
+    async def create_check(
         self, products: list[Product], payment: Payment, user_id: int
     ) -> Check:
         products_data = self._get_products_data(products)
@@ -36,16 +36,16 @@ class CheckService(BaseService):
             created_at=datetime.now(),
         )
         self.db.add(check)
-        self.db.commit()
+        await self.db.commit()
         return check
 
-    def get_checks_list(
+    async def get_checks_list(
         self, user_id: int, check_filter: CheckFilter
     ) -> list[CheckShow]:
-        query = check_filter.filter(
-            select(Check).where(Check.user_id == user_id)
+        query = await self.db.execute(
+            check_filter.filter(select(Check).where(Check.user_id == user_id))
         )
-        checks = self.db.execute(query).scalars().all()
+        checks = query.scalars().all()
         checks_list = []
         for check in checks:
             payment = Payment(
@@ -63,8 +63,8 @@ class CheckService(BaseService):
             )
         return checks_list
 
-    def get_check(self, check_id: int, user_id: int) -> Check:
-        check = self._get_check_by_id(check_id)
+    async def get_check(self, check_id: int, user_id: int) -> Check:
+        check = await self._get_check_by_id(check_id)
         if check.user_id != user_id:
             raise NotEnoughPermissionError()
         return check
@@ -95,16 +95,18 @@ class CheckService(BaseService):
     def _calculate_check_total(products: list[dict]) -> float:
         return sum([product["total"] for product in products])
 
-    def _get_check_by_id(self, check_id) -> Check:
-        query = select(Check).where(Check.id == check_id)
-        check = self.db.execute(query).scalars().first()
+    async def _get_check_by_id(self, check_id) -> Check:
+        query = await self.db.execute(select(Check).where(Check.id == check_id))
+        check = query.scalars().first()
         if not check:
             raise CheckNotFoundError(check_id)
         return check
 
-    def generate_text_check(self, check_id: int, max_row_length: int) -> str:
+    async def generate_text_check(
+        self, check_id: int, max_row_length: int
+    ) -> str:
         lines = []
-        check = self._get_check_by_id(check_id)
+        check = await self._get_check_by_id(check_id)
         # Function to format price with commas for thousands separator
 
         def format_price(price: float):

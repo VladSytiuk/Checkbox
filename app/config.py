@@ -20,7 +20,7 @@ class Config:
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB")
     DATABASE_URL = (
-        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
+        f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
         f"{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
     )
     # App
