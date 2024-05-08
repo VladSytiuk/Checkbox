@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.base import BaseService
 from app.schemas.check import Product, Payment, CheckShow
@@ -13,9 +12,15 @@ from app.errors.check import (
     NotEnoughPaymentAmountError,
 )
 from app.config import settings
+from app.storages.interfaces import CheckStorageInterface
+from app.storages.postgres.check import CheckStorage
 
 
 class CheckService(BaseService):
+
+    def __init__(self, db: AsyncSession):
+        super().__init__(db)
+        self.check_storage: CheckStorageInterface = CheckStorage(self.db)
 
     async def create_check(
         self, products: list[Product], payment: Payment, user_id: int
@@ -26,46 +31,30 @@ class CheckService(BaseService):
         self._validate_payment(payment=payment, total=check_total)
 
         rest = abs(check_total - payment.amount)
-        check = Check(
-            user_id=user_id,
+        check = await self.check_storage.create_check(
             products=products_data,
-            payment_type=payment.type,
-            payment_amount=payment.amount,
+            payment=payment,
+            user_id=user_id,
             total=check_total,
             rest=rest,
-            created_at=datetime.now(),
         )
-        self.db.add(check)
-        await self.db.commit()
         return check
 
     async def get_checks_list(
         self, user_id: int, check_filter: CheckFilter
     ) -> list[CheckShow]:
-        query = await self.db.execute(
-            check_filter.filter(select(Check).where(Check.user_id == user_id))
+        checks_list = await self.check_storage.get_checks_list(
+            user_id=user_id, check_filter=check_filter
         )
-        checks = query.scalars().all()
-        checks_list = []
-        for check in checks:
-            payment = Payment(
-                type=check.payment_type, amount=check.payment_amount
-            )
-            checks_list.append(
-                CheckShow(
-                    id=check.id,
-                    products=check.products,
-                    payment=payment,
-                    total=check.total,
-                    rest=check.rest,
-                    created_at=check.created_at,
-                )
-            )
         return checks_list
 
     async def get_check(self, check_id: int, user_id: int) -> Check:
-        check = await self._get_check_by_id(check_id)
-        if check.user_id != user_id:
+        check, check_owner_id = await self.check_storage.get_check_by_id(
+            check_id=check_id
+        )
+        if not check:
+            raise CheckNotFoundError(check_id)
+        if check_owner_id != user_id:
             raise NotEnoughPermissionError()
         return check
 
@@ -106,7 +95,9 @@ class CheckService(BaseService):
         self, check_id: int, max_row_length: int
     ) -> str:
         lines = []
-        check = await self._get_check_by_id(check_id)
+        check, user_id = await self.check_storage.get_check_by_id(
+            check_id=check_id
+        )
         # Function to format price with commas for thousands separator
 
         def format_price(price: float):
@@ -124,10 +115,10 @@ class CheckService(BaseService):
 
         # Add products
         for product in check.products:
-            name = product["name"]
-            quantity = product["quantity"]
-            price = product["price"]
-            product_total = product["total"]
+            name = product.name
+            quantity = product.quantity
+            price = product.price
+            product_total = product.total
 
             # Format product data
             product_data = (
@@ -161,7 +152,7 @@ class CheckService(BaseService):
 
         # Add payment
         payment_line = (
-            f"Payment {format_price(check.payment_amount): >{payment_space}}"
+            f"Payment {format_price(check.payment.amount): >{payment_space}}"
         )
         lines.append(payment_line)
 

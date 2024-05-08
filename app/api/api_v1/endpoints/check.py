@@ -7,7 +7,7 @@ from fastapi_pagination import Page, paginate
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.check import CheckCreate, CheckShow, Payment
+from app.schemas.check import CheckCreate, CheckShow
 from app.services.check import CheckService
 from app.api.dependencies import get_current_user, get_db
 from app.models.user import User
@@ -28,15 +28,7 @@ async def create_check(
     check = await service.create_check(
         request.products, request.payment, current_user.id
     )
-    payment = Payment(type=check.payment_type, amount=check.payment_amount)
-    return CheckShow(
-        id=check.id,
-        products=check.products,
-        payment=payment,
-        total=check.total,
-        rest=check.rest,
-        created_at=check.created_at,
-    )
+    return check
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
@@ -58,15 +50,7 @@ async def get_check(
 ):
     service = CheckService(db)
     check = await service.get_check(check_id, current_user.id)
-    payment = Payment(type=check.payment_type, amount=check.payment_amount)
-    return CheckShow(
-        id=check.id,
-        products=check.products,
-        payment=payment,
-        total=check.total,
-        rest=check.rest,
-        created_at=check.created_at,
-    )
+    return check
 
 
 @router.get(

@@ -2,14 +2,15 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from jose import jwt, JWTError
-from sqlalchemy import select
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.jwt import TokenData
-from app.models import User
 from app.config import settings
 from app.errors.auth import UserNotAuthenticatedError
 from app.db.session import async_session
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.storages.interfaces import UserStorageInterface
+from app.storages.postgres.user import UserStorage
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
@@ -23,6 +24,7 @@ async def get_db():
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
+    user_storage: UserStorageInterface = UserStorage(db)
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -33,8 +35,5 @@ async def get_current_user(
         token_data = TokenData(username=username)
     except JWTError:
         raise UserNotAuthenticatedError()
-    query = await db.execute(
-        select(User).where(User.username == token_data.username)
-    )
-    user = query.scalars().first()
+    user = await user_storage.get_user_by_username(username=token_data.username)
     return user
